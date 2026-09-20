@@ -55,7 +55,7 @@ exports.handler = async function (event) {
         "Authorization": `Bearer ${GROQ_KEY}`,
       },
       body: JSON.stringify({
-        model: type === "image" ? "qwen/qwen3.6-27b" : "llama-3.3-70b-versatile",
+        model: type === "image" ? "qwen/qwen3.8-27b" : "llama-3.3-70b-versatile",
         max_tokens: 1024,
         temperature: 0,
         messages: [
