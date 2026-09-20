@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Invoice Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #050505;
+  --surface: #0d0d0f;
+  --card-outer: rgba(255,255,255,0.04);
+  --card-inner: #111114;
+  --hairline: rgba(255,255,255,0.08);
+  --hairline-strong: rgba(255,255,255,0.12);
+  --accent: #7c6fff;
+  --accent-glow: rgba(124,111,255,0.25);
+  --accent-dim: rgba(124,111,255,0.1);
+  --text: #f0f0f5;
+  --muted: rgba(240,240,245,0.4);
+  --muted-strong: rgba(240,240,245,0.6);
+  --success: #34d399;
+  --success-dim: rgba(52,211,153,0.12);
+  --error: #f87171;
+  --error-dim: rgba(248,113,113,0.12);
+  --font: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 50;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.025;
+}
+
+.orb { position: fixed; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; }
+.orb-1 { width: 600px; height: 600px; background: radial-gradient(circle, rgba(124,111,255,0.18) 0%, transparent 70%); top: -200px; left: -150px; animation: f1 12s ease-in-out infinite; }
+.orb-2 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(52,211,153,0.1) 0%, transparent 70%); bottom: -100px; right: -100px; animation: f2 15s ease-in-out infinite; }
+@keyframes f1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(40px,30px)} }
+@keyframes f2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-30px,-40px)} }
+
+.wrapper { position: relative; z-index: 1; max-width: 780px; margin: 0 auto; padding: 80px 24px 120px; }
+
+.nav { position: fixed; top: 24px; left: 50%; transform: translateX(-50%); z-index: 100; }
+.nav-pill { background: rgba(13,13,15,0.85); border: 1px solid var(--hairline); border-radius: 100px; padding: 10px 20px; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text); }
+.nav-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+.header { text-align: center; padding-top: 60px; margin-bottom: 64px; opacity: 0; transform: translateY(24px); animation: reveal 0.9s var(--ease-out-expo) 0.1s forwards; }
+@keyframes reveal { to { opacity: 1; transform: translateY(0); } }
+
+.eyebrow { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--hairline-strong); border-radius: 100px; padding: 5px 14px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: var(--muted-strong); margin-bottom: 28px; }
+
+h1 { font-size: clamp(34px, 6vw, 56px); font-weight: 700; letter-spacing: -0.04em; line-height: 1.05; color: #fff; margin-bottom: 18px; }
+h1 em { font-style: normal; background: linear-gradient(135deg, #a78bfa, #7c6fff 40%, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.sub { font-size: 15px; color: var(--muted); line-height: 1.65; max-width: 420px; margin: 0 auto; }
+
+/* Tabs */
+.tabs { display: flex; gap: 6px; background: var(--card-outer); border: 1px solid var(--hairline); border-radius: 14px; padding: 5px; margin-bottom: 16px; opacity: 0; transform: translateY(16px); animation: reveal 0.8s var(--ease-out-expo) 0.25s forwards; }
+.tab { flex: 1; padding: 10px; border: none; background: transparent; font-family: var(--font); font-size: 13px; font-weight: 500; color: var(--muted); border-radius: 10px; cursor: pointer; transition: all 0.3s var(--ease-spring); }
+.tab.active { background: var(--accent); color: #fff; box-shadow: 0 4px 16px var(--accent-glow); }
+
+/* Panels */
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* Bezel card */
+.bezel { background: var(--card-outer); border: 1px solid var(--hairline); border-radius: 28px; padding: 6px; margin-bottom: 16px; opacity: 0; transform: translateY(20px); animation: reveal 0.8s var(--ease-out-expo) 0.35s forwards; }
+.bezel-inner { background: var(--card-inner); border-radius: 23px; box-shadow: inset 0 1px 1px rgba(255,255,255,0.06); overflow: hidden; }
+
+/* Upload */
+.upload-zone { padding: 52px 32px; text-align: center; cursor: pointer; position: relative; transition: background 0.4s var(--ease-spring); }
+.upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.upload-zone:hover, .upload-zone.drag-over { background: rgba(124,111,255,0.06); }
+.upload-icon-wrap { width: 64px; height: 64px; margin: 0 auto 20px; background: var(--accent-dim); border: 1px solid rgba(124,111,255,0.25); border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 26px; transition: transform 0.4s var(--ease-spring), box-shadow 0.4s; }
+.upload-zone:hover .upload-icon-wrap { transform: scale(1.08) translateY(-2px); box-shadow: 0 0 32px var(--accent-glow); }
+.upload-zone h3 { font-size: 17px; font-weight: 600; color: #fff; letter-spacing: -0.02em; margin-bottom: 6px; }
+.upload-zone p { font-size: 13px; color: var(--muted); }
+.file-chosen { margin-top: 14px; font-size: 13px; font-weight: 500; color: var(--accent); opacity: 0; transform: translateY(6px); transition: all 0.3s var(--ease-out-expo); }
+.file-chosen.show { opacity: 1; transform: translateY(0); }
+
+.divider { height: 1px; background: var(--hairline); margin: 0 24px; }
+
+.flow-row { display: flex; align-items: center; justify-content: center; padding: 18px 32px; flex-wrap: wrap; gap: 8px; }
+.flow-step { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--muted); }
+.flow-num { width: 22px; height: 22px; border-radius: 50%; background: var(--accent-dim); border: 1px solid rgba(124,111,255,0.25); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--accent); }
+.flow-arrow { color: var(--hairline-strong); font-size: 14px; margin: 0 4px; }
+
+/* Text area */
+.text-panel { padding: 24px; }
+.text-panel label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 10px; }
+textarea { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--hairline); border-radius: 12px; padding: 14px 16px; font-family: var(--font); font-size: 13px; color: var(--text); resize: vertical; min-height: 180px; outline: none; transition: border-color 0.3s; line-height: 1.6; }
+textarea:focus { border-color: var(--accent); }
+textarea::placeholder { color: var(--muted); }
+
+/* CTA */
+.btn-wrap { opacity: 0; transform: translateY(16px); animation: reveal 0.8s var(--ease-out-expo) 0.5s forwards; }
+.btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 15px 28px; background: linear-gradient(135deg, #7c6fff, #5b4fd4); color: #fff; border: none; border-radius: 16px; font-family: var(--font); font-size: 15px; font-weight: 600; letter-spacing: -0.01em; cursor: pointer; position: relative; overflow: hidden; transition: transform 0.3s var(--ease-spring), box-shadow 0.3s var(--ease-spring), opacity 0.2s; box-shadow: 0 0 0 1px rgba(124,111,255,0.3), 0 8px 32px rgba(124,111,255,0.2); }
+.btn::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent); opacity: 0; transition: opacity 0.3s; }
+.btn:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px rgba(124,111,255,0.4), 0 16px 48px rgba(124,111,255,0.35); }
+.btn:hover::before { opacity: 1; }
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-icon { width: 30px; height: 30px; border-radius: 50%; background: rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; font-size: 14px; transition: transform 0.3s var(--ease-spring); }
+.btn:hover .btn-icon { transform: translateX(2px) translateY(-1px) scale(1.1); }
+
+.status { display: none; align-items: center; gap: 12px; background: var(--card-outer); border: 1px solid var(--hairline); border-radius: 14px; padding: 14px 20px; font-size: 13px; color: var(--muted-strong); margin-top: 14px; }
+.status.show { display: flex; }
+.spin { width: 16px; height: 16px; border: 2px solid var(--hairline-strong); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.65s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.error-box { display: none; background: var(--error-dim); border: 1px solid rgba(248,113,113,0.2); border-radius: 14px; padding: 14px 20px; font-size: 13px; color: var(--error); margin-top: 14px; }
+.error-box.show { display: block; }
+
+/* Results */
+.results { display: none; flex-direction: column; gap: 14px; margin-top: 24px; opacity: 0; transform: translateY(16px); }
+.results.show { display: flex; animation: reveal 0.7s var(--ease-out-expo) forwards; }
+.results-label { display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
+.results-label h2 { font-size: 15px; font-weight: 600; letter-spacing: -0.02em; color: #fff; }
+.conf-badge { font-size: 11px; font-weight: 600; padding: 4px 12px; border-radius: 100px; background: var(--success-dim); color: var(--success); border: 1px solid rgba(52,211,153,0.2); }
+
+.cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+@media(min-width:560px){ .cards { grid-template-columns: repeat(3,1fr); } }
+
+.data-card { background: var(--card-outer); border: 1px solid var(--hairline); border-radius: 18px; padding: 18px; transition: border-color 0.3s, background 0.3s; }
+.data-card:hover { border-color: var(--hairline-strong); background: rgba(255,255,255,0.03); }
+.data-card-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 8px; }
+.data-card-value { font-size: 18px; font-weight: 700; letter-spacing: -0.03em; color: #fff; word-break: break-word; line-height: 1.2; }
+.data-card-value.accent { color: var(--accent); }
+.data-card-value.sm { font-size: 14px; font-weight: 500; letter-spacing: -0.01em; }
+
+.table-bezel { background: var(--card-outer); border: 1px solid var(--hairline); border-radius: 18px; overflow: hidden; }
+.table-head-row { padding: 14px 20px; border-bottom: 1px solid var(--hairline); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; padding: 10px 18px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); border-bottom: 1px solid var(--hairline); }
+td { padding: 11px 18px; font-size: 13px; color: var(--muted-strong); border-bottom: 1px solid var(--hairline); transition: color 0.2s; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { color: var(--text); background: rgba(124,111,255,0.04); }
+.no-items { padding: 24px; text-align: center; font-size: 13px; color: var(--muted); }
+
+.action-row { display: flex; gap: 10px; }
+.btn-ghost { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; background: var(--card-outer); border: 1px solid var(--hairline); border-radius: 14px; font-family: var(--font); font-size: 13px; font-weight: 500; color: var(--muted-strong); cursor: pointer; transition: all 0.3s var(--ease-spring); }
+.btn-ghost:hover { border-color: var(--hairline-strong); color: var(--text); transform: translateY(-1px); }
+
+details { background: var(--card-outer); border: 1px solid var(--hairline); border-radius: 14px; overflow: hidden; }
+summary { padding: 13px 18px; font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; user-select: none; list-style: none; display: flex; align-items: center; gap: 6px; transition: color 0.2s; }
+summary:hover { color: var(--muted-strong); }
+pre { padding: 16px 18px; font-size: 11px; color: var(--muted); overflow-x: auto; border-top: 1px solid var(--hairline); line-height: 1.7; font-family: 'SF Mono','Fira Code',monospace; }
+
+@media(max-width:600px){
+  .wrapper { padding: 80px 16px 80px; }
+  .header { padding-top: 40px; margin-bottom: 40px; }
+  .flow-step span { display: none; }
+  .action-row { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<nav class="nav">
+  <div class="nav-pill">
+    <div class="nav-dot"></div>
+    Invoice Intelligence
+  </div>
+</nav>
+
+<div class="wrapper">
+  <div class="header">
+    <div class="eyebrow">✦ AI-Powered</div>
+    <h1>Extract any invoice<br><em>in seconds</em></h1>
+    <p class="sub">Upload an image or paste invoice text. Claude reads it and pulls every field automatically.</p>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('image')">📎 Upload Image</button>
+    <button class="tab" onclick="switchTab('text')">📋 Paste Text</button>
+  </div>
+
+  <!-- Image panel -->
+  <div class="panel active" id="panel-image">
+    <div class="bezel">
+      <div class="bezel-inner">
+        <div class="upload-zone" id="uploadZone">
+          <input type="file" id="fileInput" accept="image/*,image/jpeg,image/png,image/webp">
+          <div class="upload-icon-wrap">📎</div>
+          <h3>Drop your invoice here</h3>
+          <p>JPG · PNG · WebP · max 5MB</p>
+          <div class="file-chosen" id="fileChosen"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="flow-row">
+          <div class="flow-step"><div class="flow-num">1</div><span>Upload image</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step"><div class="flow-num">2</div><span>Claude reads it</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step"><div class="flow-num">3</div><span>Data extracted</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step"><div class="flow-num">4</div><span>Export ready</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Text panel -->
+  <div class="panel" id="panel-text">
+    <div class="bezel">
+      <div class="bezel-inner">
+        <div class="text-panel">
+          <label>Paste invoice text below</label>
+          <textarea id="textInput" placeholder="Copy and paste the full text from your invoice PDF here..."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-wrap">
+    <button class="btn" id="extractBtn" disabled onclick="extract()">
+      <span>Extract Invoice Data</span>
+      <div class="btn-icon">⚡</div>
+    </button>
+  </div>
+
+  <div class="status" id="status">
+    <div class="spin"></div>
+    <span id="statusText">Claude is reading your invoice…</span>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+
+  <div class="results" id="results">
+    <div class="results-label">
+      <h2>Extracted Data</h2>
+      <div class="conf-badge" id="confBadge">Extracted</div>
+    </div>
+    <div class="cards" id="cardsGrid"></div>
+    <div class="table-bezel">
+      <div class="table-head-row">Line Items</div>
+      <div id="lineBody"></div>
+    </div>
+    <div class="action-row">
+      <button class="btn-ghost" onclick="copyCSV()">📋 Copy as CSV</button>
+      <button class="btn-ghost" onclick="resetAll()">↩ New Invoice</button>
+    </div>
+    <details>
+      <summary>⌥ Raw response</summary>
+      <pre id="rawOut"></pre>
+    </details>
+  </div>
+</div>
+
+<script>
+let activeTab = 'image';
+let selectedFile = null;
+let lastResult = null;
+
+// Tab switching
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='image')||(i===1&&tab==='text')));
+  document.getElementById('panel-image').classList.toggle('active', tab==='image');
+  document.getElementById('panel-text').classList.toggle('active', tab==='text');
+  updateBtn();
+}
+
+function updateBtn() {
+  const btn = document.getElementById('extractBtn');
+  if (activeTab === 'image') btn.disabled = !selectedFile;
+  else btn.disabled = !document.getElementById('textInput').value.trim();
+}
+
+document.getElementById('textInput').addEventListener('input', updateBtn);
+
+// File handling
+const fileInput = document.getElementById('fileInput');
+const uploadZone = document.getElementById('uploadZone');
+
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.classList.remove('drag-over'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+
+function handleFile(file) {
+  selectedFile = file;
+  const fc = document.getElementById('fileChosen');
+  fc.textContent = `✓ ${file.name}  (${(file.size/1024).toFixed(0)} KB)`;
+  fc.classList.add('show');
+  updateBtn();
+  hideError();
+  document.getElementById('results').classList.remove('show');
+}
+
+async function extract() {
+  document.getElementById('extractBtn').disabled = true;
+  showStatus('Claude is reading your invoice…');
+  hideError();
+  document.getElementById('results').classList.remove('show');
+
+  try {
+    let payload;
+
+    if (activeTab === 'image' && selectedFile) {
+      const base64 = await toBase64(selectedFile);
+      payload = { type: 'image', content: { base64, mediaType: selectedFile.type } };
+    } else {
+      const text = document.getElementById('textInput').value.trim();
+      payload = { type: 'text', content: text };
+    }
+
+    const res = await fetch('/.netlify/functions/extract', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const json = await res.json();
+
+    if (!res.ok || json.error) throw new Error(json.error || 'Server error');
+
+    const data = json.data || json;
+    lastResult = data;
+    document.getElementById('rawOut').textContent = JSON.stringify(data, null, 2);
+    renderResults(data);
+
+  } catch (err) {
+    showError(err.message || 'Something went wrong. Try again.');
+  } finally {
+    hideStatus();
+    document.getElementById('extractBtn').disabled = false;
+  }
+}
+
+function toBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function renderResults(d) {
+  const fmt = (v, prefix='') => {
+    if (v === null || v === undefined) return '—';
+    if (typeof v === 'number') return prefix + v.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2});
+    return String(v);
+  };
+
+  const pfx = d.currency ? d.currency + ' ' : '';
+  const cards = [
+    { label: 'Supplier', value: fmt(d.supplier_name), cls: 'sm' },
+    { label: 'Invoice No.', value: fmt(d.invoice_number), cls: '' },
+    { label: 'Total', value: fmt(d.total_amount, pfx), cls: 'accent' },
+    { label: 'Currency', value: fmt(d.currency), cls: '' },
+    { label: 'Invoice Date', value: fmt(d.invoice_date), cls: 'sm' },
+    { label: 'Due Date', value: fmt(d.due_date), cls: 'sm' },
+    { label: 'Tax', value: fmt(d.tax_amount, pfx), cls: '' },
+    { label: 'Bill To', value: fmt(d.bill_to), cls: 'sm' },
+  ];
+
+  document.getElementById('cardsGrid').innerHTML = cards.map(c =>
+    `<div class="data-card"><div class="data-card-label">${c.label}</div><div class="data-card-value ${c.cls}">${c.value}</div></div>`
+  ).join('');
+
+  const items = d.line_items || [];
+  document.getElementById('lineBody').innerHTML = items.length
+    ? `<table><thead><tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead><tbody>${
+        items.map(i => `<tr><td>${i.description||'—'}</td><td>${i.quantity??'—'}</td><td>${i.unit_price!=null?i.unit_price.toLocaleString('en-US',{minimumFractionDigits:2}):'—'}</td><td>${i.total!=null?i.total.toLocaleString('en-US',{minimumFractionDigits:2}):'—'}</td></tr>`).join('')
+      }</tbody></table>`
+    : '<div class="no-items">No line items detected</div>';
+
+  document.getElementById('confBadge').textContent = `${items.length > 0 ? items.length + ' items · ' : ''}Extracted`;
+  document.getElementById('results').classList.add('show');
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function copyCSV() {
+  if (!lastResult) return;
+  const d = lastResult;
+  const rows = [
+    ['Supplier','Invoice No','Date','Due Date','Currency','Subtotal','Tax','Total','Bill To'],
+    [d.supplier_name||'',d.invoice_number||'',d.invoice_date||'',d.due_date||'',d.currency||'',d.subtotal||'',d.tax_amount||'',d.total_amount||'',d.bill_to||'']
+  ];
+  navigator.clipboard.writeText(rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n')).then(()=>{
+    const btn = event.currentTarget; const orig = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    setTimeout(()=>btn.textContent=orig,2000);
+  });
+}
+
+function resetAll() {
+  selectedFile = null; lastResult = null;
+  fileInput.value = '';
+  document.getElementById('fileChosen').textContent = '';
+  document.getElementById('fileChosen').classList.remove('show');
+  document.getElementById('textInput').value = '';
+  document.getElementById('results').classList.remove('show');
+  hideError(); hideStatus(); updateBtn();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function showStatus(m) { document.getElementById('statusText').textContent=m; document.getElementById('status').classList.add('show'); }
+function hideStatus() { document.getElementById('status').classList.remove('show'); }
+function showError(m) { document.getElementById('errorBox').textContent='⚠ '+m; document.getElementById('errorBox').classList.add('show'); }
+function hideError() { document.getElementById('errorBox').classList.remove('show'); }
+</script>
+</body>
+</html>
