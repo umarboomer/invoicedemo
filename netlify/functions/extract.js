@@ -55,7 +55,7 @@ exports.handler = async function (event) {
         "Authorization": `Bearer ${GROQ_KEY}`,
       },
       body: JSON.stringify({
-        model: type === "image" ? "meta-llama/llama-4-scout-17b-16e-instruct" : "llama-3.3-70b-versatile",
+        model: type === "image" ? "llama-3.2-90b-vision-preview" : "llama-3.3-70b-versatile",
         max_tokens: 1024,
         temperature: 0,
         messages: [
