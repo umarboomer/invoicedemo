@@ -199,10 +199,10 @@ pre { padding: 16px 18px; font-size: 11px; color: var(--muted); overflow-x: auto
     <div class="bezel">
       <div class="bezel-inner">
         <div class="upload-zone" id="uploadZone">
-          <input type="file" id="fileInput" accept="image/*,image/jpeg,image/png,image/webp">
+          <input type="file" id="fileInput" accept="image/*,.pdf,application/pdf">
           <div class="upload-icon-wrap">📎</div>
           <h3>Drop your invoice here</h3>
-          <p>JPG · PNG · WebP · max 5MB</p>
+          <p>JPG · PNG · WebP · PDF · max 5MB</p>
           <div class="file-chosen" id="fileChosen"></div>
         </div>
         <div class="divider"></div>
@@ -318,6 +318,10 @@ async function extract() {
 
     if (activeTab === 'image' && selectedFile) {
       const base64 = await toBase64(selectedFile);
+      const isPDF = selectedFile.type === 'application/pdf';
+      if (isPDF) {
+        throw new Error('PDF detected — please use the "Paste Text" tab. Open the PDF, select all text (Ctrl+A), copy, and paste it there.');
+      }
       payload = { type: 'image', content: { base64, mediaType: selectedFile.type } };
     } else {
       const text = document.getElementById('textInput').value.trim();

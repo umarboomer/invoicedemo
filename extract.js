@@ -44,6 +44,14 @@ exports.handler = async function (event) {
         text: buildPrompt(),
       },
     ];
+  } else if (type === "pdf") {
+    // PDFs: tell the model we are sending a PDF and ask it to extract text fields
+    userContent = [
+      {
+        type: "text",
+        text: buildPrompt() + "\n\nNote: The document is a PDF encoded as base64. Extract all invoice fields from it. Base64 data (first 500 chars for reference): " + content.base64.substring(0, 500),
+      },
+    ];
   } else {
     userContent = buildPrompt() + "\n\nINVOICE TEXT:\n" + content;
   }
